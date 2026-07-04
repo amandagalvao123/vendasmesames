@@ -98,7 +98,6 @@ th:first-child{background:var(--roxo);z-index:3;}
 <a href="#sec-resumo" class="on"><span class="ico">📌</span>Resumo</a>
 <a href="#sec-lojas"><span class="ico">🏪</span>Lojas</a>
 <a href="#sec-evolucao"><span class="ico">📈</span>Evolução</a>
-<a href="#sec-b13"><span class="ico">🆕</span>BIGGS 13</a>
 <a href="#sec-pagamentos"><span class="ico">💳</span>Pagamentos</a>
 </nav>
 <div class="container">
@@ -136,14 +135,7 @@ th:first-child{background:var(--roxo);z-index:3;}
 <div class="chartbox"><canvas id="chMarca"></canvas></div>
 </div></section>
 
-<section id="sec-pagamentos"><section id="sec-b13"><div class="card">
-<h2>🆕 BIGGS 13 — Arthur Thomas (abertura 19/05/2026)</h2>
-<div class="sub">MAI = 13 dias de operação (19–31/05) · JUN = primeiro mês cheio · comparativo vs demais lojas BIGGS</div>
-<div class="kpis" id="kpiB13"></div>
-<div class="chartbox" style="height:300px;"><canvas id="chB13"></canvas></div>
-</div></section>
-
-<div class="card">
+<section id="sec-pagamentos"><div class="card">
 <h2>Análise por Forma de Pagamento</h2>
 <div class="sub">Participação % e valores por mês — respeita filtros de marca/loja</div>
 <div class="toggle" id="tgView">
@@ -210,7 +202,7 @@ function renderKPIs(){
   const varUlt = revM[N-2]?((revM[N-1]-revM[N-2])/revM[N-2]*100):0;
   const add=(lbl,val,sub,cls)=>{el.insertAdjacentHTML('beforeend',
     `<div class="kpi"><div class="lbl">${lbl}</div><div class="val">${val}</div>${sub?`<div class="sub ${cls||''}">${sub}</div>`:''}</div>`)};
-  add('Faturamento Jan–Abr', fmt(totR), fp!=='ALL'?fp:ls.length+' loja(s)');
+  add('Faturamento '+MLBL[MESES[0]]+'–'+MLBL[MESES[MESES.length-1]], fmt(totR), fp!=='ALL'?fp:ls.length+' loja(s)');
   MESES.forEach((m,i)=>{
     const v = i>0&&revM[i-1]?((revM[i]-revM[i-1])/revM[i-1]*100):null;
     add(MLBL[m]+'/26', fmt(revM[i]), v!==null?pct(v)+' vs '+MLBL[MESES[i-1]]:'', v>=0?'pos':'neg');
@@ -324,38 +316,6 @@ document.getElementById('tgView').addEventListener('click',e=>{
   renderPag();
 });
 
-let chB13;
-function renderB13(){
-  const el = document.getElementById('kpiB13'); el.innerHTML='';
-  const m='06', d13 = DATA.lojas[B13].meses[m];
-  const d13m = DATA.lojas[B13].meses['05'], DIAS_MAI = 13;
-  const outras = lojas.filter(l=>DATA.lojas[l].marca==='BIGGS'&&l!==B13);
-  const revO = outras.reduce((s,l)=>s+DATA.lojas[l].meses[m].rev,0);
-  const cupO = outras.reduce((s,l)=>s+DATA.lojas[l].meses[m].cup,0);
-  const mediaLoja = revO/outras.length;
-  const rankArr = lojas.filter(l=>DATA.lojas[l].marca==='BIGGS').map(l=>({l,r:DATA.lojas[l].meses[m].rev})).sort((a,b)=>b.r-a.r);
-  const rank = rankArr.findIndex(x=>x.l===B13)+1;
-  const totJun = lojas.reduce((s,l)=>s+DATA.lojas[l].meses[m].rev,0);
-  const add=(lbl,val,sub,cls)=>el.insertAdjacentHTML('beforeend',
-    `<div class="kpi"><div class="lbl">${lbl}</div><div class="val">${val}</div>${sub?`<div class="sub ${cls||''}">${sub}</div>`:''}</div>`);
-  add('MAI (13 dias)', fmt(d13m.rev), fmt(Math.round(d13m.rev/DIAS_MAI))+'/dia · '+fmtI(d13m.cup)+' cupons');
-  add('Faturamento JUN', fmt(d13.rev), fmt(Math.round(d13.rev/30))+'/dia · '+fmtI(d13.cup)+' cupons');
-  add('Média diária JUN vs MAI', pct((d13.rev/30)/(d13m.rev/DIAS_MAI)*100-100), 'normalização pós-inauguração', (d13.rev/30)>=(d13m.rev/DIAS_MAI)?'pos':'neg');
-  add('Ticket médio JUN', fmt2(d13.tm), 'MAI: '+fmt2(d13m.tm));
-  add('vs Média BIGGS/loja', pct((d13.rev/mediaLoja-1)*100), 'média: '+fmt(mediaLoja), d13.rev>=mediaLoja?'pos':'neg');
-  add('Ranking BIGGS', rank+'º de '+rankArr.length, 'em faturamento JUN');
-  add('Participação no grupo', (d13.rev/totJun*100).toLocaleString('pt-BR',{maximumFractionDigits:1})+'%', 'do total JUN/26');
-  add('TM vs demais BIGGS', pct((d13.tm/(revO/cupO)-1)*100), 'demais: '+fmt2(revO/cupO), d13.tm>=revO/cupO?'pos':'neg');
-  // gráfico ranking BIGGS JUN
-  if(chB13) chB13.destroy();
-  chB13 = new Chart(document.getElementById('chB13'),{type:'bar',
-    data:{labels:rankArr.map(x=>x.l.replace('BIGGS ','BG').replace(' - ',' ').substring(0,18)),
-      datasets:[{label:'Faturamento JUN/26',data:rankArr.map(x=>x.r),borderRadius:6,
-        backgroundColor:rankArr.map(x=>x.l===B13?'#E0A426':'#B81D22')}]},
-    options:{indexAxis:'y',responsive:true,maintainAspectRatio:false,
-      plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>fmt(c.raw)}}},
-      scales:{x:{ticks:{callback:v=>'R$ '+(v/1000).toLocaleString('pt-BR')+'k'}}}}});
-}
 const btnB13 = document.getElementById('tgB13');
 btnB13.addEventListener('click',()=>{
   incB13 = !incB13;
@@ -374,7 +334,7 @@ function fitKPIs(){
   });
 }
 window.addEventListener('resize',()=>fitKPIs());
-function renderAll(){renderKPIs();renderTabela();renderEvol();renderPag();renderB13();fitKPIs();}
+function renderAll(){renderKPIs();renderTabela();renderEvol();renderPag();fitKPIs();}
 selM.addEventListener('change',()=>{popLojas();renderAll();});
 selL.addEventListener('change',renderAll);
 selF.addEventListener('change',renderAll);
@@ -387,7 +347,7 @@ tabs.forEach(a=>a.addEventListener('click',e=>{
   e.preventDefault();
   document.querySelector(a.getAttribute('href')).scrollIntoView({behavior:'smooth'});
 }));
-const secs = ['sec-resumo','sec-lojas','sec-evolucao','sec-b13','sec-pagamentos'].map(id=>document.getElementById(id));
+const secs = ['sec-resumo','sec-lojas','sec-evolucao','sec-pagamentos'].map(id=>document.getElementById(id));
 const obs = new IntersectionObserver(es=>{
   es.forEach(en=>{ if(en.isIntersecting){
     tabs.forEach(a=>a.classList.toggle('on', a.getAttribute('href')==='#'+en.target.id));
