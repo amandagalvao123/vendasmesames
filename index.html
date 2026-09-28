@@ -118,6 +118,7 @@ th:first-child{background:var(--roxo);z-index:3;}
 • <b>BIGGS 13 – Arthur Thomas iniciou vendas em 19/05/2026</b> (MAI contém apenas 13 dias de operação da loja — variações % MAI→JUN do B13 refletem isso). Use o botão nos filtros para incluir/excluir a loja e comparar o grupo em base igual.</div>
 
 <div class="filtros">
+<div><label>Ano</label><select id="fAno"><option value="2026">2026</option><option value="2025">2025</option></select></div>
 <div><label>Mês</label><select id="fMes"><option value="ALL">Todos os meses</option></select></div>
 <div><label>Marca</label><select id="fMarca"><option value="ALL">Todas as marcas</option></select></div>
 <div><label>Loja</label><select id="fLoja"><option value="ALL">Todas as lojas</option></select></div>
@@ -219,8 +220,30 @@ const selM = document.getElementById('fMarca'), selL = document.getElementById('
       selF = document.getElementById('fForma'), selMet = document.getElementById('fMetrica');
 marcas.forEach(m=>selM.add(new Option(m,m)));
 const selMes = document.getElementById('fMes');
-MESES.forEach(m=>selMes.add(new Option(MLBL[m]+'/26',m)));
-function mesesAtivos(){ return selMes.value==='ALL' ? MESES : [selMes.value]; }
+const selAno = document.getElementById('fAno');
+const M12K=['01','02','03','04','05','06','07','08','09','10','11','12'];
+const MLBL12={'01':'JAN','02':'FEV','03':'MAR','04':'ABR','05':'MAI','06':'JUN','07':'JUL','08':'AGO','09':'SET','10':'OUT','11':'NOV','12':'DEZ'};
+Object.assign(MLBL, MLBL12);
+function anoSel(){ return selAno.value; }
+function mesesDoAno(){ return anoSel()==='2025' ? M12K : MESES; }
+function popMeses(){
+  const cur=selMes.value;
+  selMes.innerHTML='<option value="ALL">Todos os meses</option>';
+  mesesDoAno().forEach(m=>selMes.add(new Option(MLBL[m]+'/'+(anoSel()==='2025'?'25':'26'),m)));
+  if([...selMes.options].some(o=>o.value===cur)) selMes.value=cur; else selMes.value='ALL';
+}
+popMeses();
+function revAno(l,m){
+  if(anoSel()==='2025'){ const a=D25.porLoja[l]; return a?a[parseInt(m,10)-1]:0; }
+  return DATA.lojas[l].meses[m].rev;
+}
+function cupAno(l,m){ return anoSel()==='2025' ? 0 : DATA.lojas[l].meses[m].cup; }
+function temDado(l,m){ return anoSel()==='2025' ? revAno(l,m)>0 : DATA.lojas[l].meses[m].cup>0; }
+function mesesAtivos(){ return selMes.value==='ALL' ? mesesDoAno() : [selMes.value]; }
+function extras25(m){ // Dona Elza etc., só em 2025 com filtros ALL
+  if(anoSel()!=='2025'||selM.value!=='ALL'||selL.value!=='ALL') return 0;
+  return D25.extras.reduce((s,e)=>s+e.vals[parseInt(m,10)-1],0);
+}
 formas.forEach(f=>selF.add(new Option(f,f)));
 
 function popLojas(){
@@ -240,37 +263,43 @@ function lojasFiltradas(){
 function renderKPIs(){
   const ls = lojasFiltradas(), fp = selF.value;
   let el = document.getElementById('kpis'); el.innerHTML='';
-  const revM = MESES.map(m=>{
-    if(fp==='ALL') return ls.reduce((s,l)=>s+DATA.lojas[l].meses[m].rev,0);
+  const MD = mesesDoAno();
+  const revM = MD.map(m=>{
+    if(fp==='ALL'||anoSel()==='2025') return ls.reduce((s,l)=>s+revAno(l,m),0)+extras25(m);
     return ls.reduce((s,l)=>s+((DATA.pagamentos[l]?.[m]?.[fp])||0),0);
   });
-  const cupM = MESES.map(m=>ls.reduce((s,l)=>s+DATA.lojas[l].meses[m].cup,0));
+  const cupM = MD.map(m=>ls.reduce((s,l)=>s+cupAno(l,m),0));
   const totR = revM.reduce((a,b)=>a+b,0), totC = cupM.reduce((a,b)=>a+b,0);
-  const N=MESES.length;
+  const N=MD.length;
   const varUlt = revM[N-2]?((revM[N-1]-revM[N-2])/revM[N-2]*100):0;
   const add=(lbl,val,sub,cls)=>{el.insertAdjacentHTML('beforeend',
     `<div class="kpi"><div class="lbl">${lbl}</div><div class="val">${val}</div>${sub?`<div class="sub ${cls||''}">${sub}</div>`:''}</div>`)};
-  add('Faturamento '+MLBL[MESES[0]]+'–'+MLBL[MESES[MESES.length-1]], fmt(totR), fp!=='ALL'?fp:ls.length+' loja(s)');
-  MESES.forEach((m,i)=>{
+  const AA = anoSel()==='2025'?'/25':'/26';
+  add('Faturamento '+MLBL[MD[0]]+'–'+MLBL[MD[MD.length-1]]+AA, fmt(totR), (fp!=='ALL'&&anoSel()==='2026')?fp:ls.length+' loja(s)');
+  MD.forEach((m,i)=>{
     const v = i>0&&revM[i-1]?((revM[i]-revM[i-1])/revM[i-1]*100):null;
-    add(MLBL[m]+'/26', fmt(revM[i]), v!==null?pct(v)+' vs '+MLBL[MESES[i-1]]:'', v>=0?'pos':'neg');
+    add(MLBL[m]+AA, fmt(revM[i]), v!==null?pct(v)+' vs '+MLBL[MD[i-1]]:'', v>=0?'pos':'neg');
   });
-  if(fp==='ALL'){
+  if(fp==='ALL'&&anoSel()==='2026'){
     add('Cupons no período', fmtI(totC), 'TM: '+fmt2(totC?totR/totC:0));
   }
-  add(MLBL[MESES[N-1]]+' vs '+MLBL[MESES[N-2]], pct(varUlt), '', varUlt>=0?'pos':'neg');
+  add(MLBL[MD[N-1]]+' vs '+MLBL[MD[N-2]], pct(varUlt), '', varUlt>=0?'pos':'neg');
 }
 
 // ===== Tabela lojas =====
 function renderTabela(){
   const met = selMet.value, ls = lojasFiltradas(), fp = selF.value;
-  const subs={'rev':'Faturamento por loja, variação % vs mês anterior','cup':'Nº de cupons por loja','tm':'Ticket médio por loja'};
+  if(anoSel()==='2025'&&selMet.value!=='rev') selMet.value='rev';
+  selMet.disabled = anoSel()==='2025';
+  selF.disabled = anoSel()==='2025';
+  const subs={'rev':'Faturamento por loja, variação % vs mês anterior'+(anoSel()==='2025'?' · base 2025: somente faturamento mensal':''),'cup':'Nº de cupons por loja','tm':'Ticket médio por loja'};
   document.getElementById('subTabela').textContent = subs[met] + (fp!=='ALL'&&met==='rev'?' — forma: '+fp:'');
   const MA = mesesAtivos();
   const th = document.querySelector('#tblLojas thead'), tb = document.querySelector('#tblLojas tbody');
   th.innerHTML = '<tr><th>Loja</th>' + MA.map(m=>`<th>${MLBL[m]}</th><th>Δ%</th>`).join('') + (MA.length>1?'<th>Total / Média</th>':'') + '</tr>';
   tb.innerHTML = '';
   const getV=(l,m)=>{
+    if(anoSel()==='2025') return revAno(l,m);
     if(met==='rev'&&fp!=='ALL') return (DATA.pagamentos[l]?.[m]?.[fp])||0;
     return DATA.lojas[l].meses[m][met];
   };
@@ -281,11 +310,12 @@ function renderTabela(){
     let cells = '';
     r.vals.forEach((v,i)=>{
       tot[i]+=v;
-      const mIdx = MESES.indexOf(MA[i]);
-      const semDado = DATA.lojas[r.l].meses[MA[i]].cup===0;
-      const antM = mIdx>0 ? MESES[mIdx-1] : null;
+      const MDx = mesesDoAno();
+      const mIdx = MDx.indexOf(MA[i]);
+      const semDado = !temDado(r.l, MA[i]);
+      const antM = mIdx>0 ? MDx[mIdx-1] : null;
       const vAnt = antM ? getV(r.l, antM) : null;
-      const semAnt = !antM || DATA.lojas[r.l].meses[antM].cup===0;
+      const semAnt = !antM || !temDado(r.l, antM);
       const d = (!semDado&&!semAnt&&vAnt)?((v-vAnt)/vAnt*100):null;
       cells += `<td>${semDado?'—':F(v)}</td><td class="${d>=0?'pos':'neg'}">${d!==null?pct(d):'—'}</td>`;
     });
@@ -293,14 +323,24 @@ function renderTabela(){
     const mk = DATA.lojas[r.l].marca;
     tb.insertAdjacentHTML('beforeend',`<tr><td class="mname"><span class="tagm tag-${mk}">${mk}</span>${r.l}</td>${cells}${MA.length>1?`<td><b>${F(agg)}</b></td>`:''}</tr>`);
   });
+  if(anoSel()==='2025'&&selM.value==='ALL'&&selL.value==='ALL'){
+    D25.extras.forEach(e=>{
+      let cells=''; let sE=0;
+      MA.forEach((m,i)=>{
+        const v=e.vals[parseInt(m,10)-1]; sE+=v; tot[i]+=v;
+        cells+=`<td>${v>0?F(v):'—'}</td><td>—</td>`;
+      });
+      tb.insertAdjacentHTML('beforeend',`<tr><td class="mname">${e.nome}</td>${cells}${MA.length>1?`<td><b>${F(sE)}</b></td>`:''}</tr>`);
+    });
+  }
   if(rows.length>1 && met!=='tm'){
     let cells='';
     tot.forEach((v,i)=>{
-      const mIdx = MESES.indexOf(MA[i]);
+      const mIdx = mesesDoAno().indexOf(MA[i]);
       let d=null;
       if(mIdx>0){
-        const antM=MESES[mIdx-1];
-        const totAnt=ls.reduce((s,l)=>s+getV(l,antM),0);
+        const antM=mesesDoAno()[mIdx-1];
+        const totAnt=ls.reduce((s,l)=>s+getV(l,antM),0)+extras25(antM);
         if(totAnt) d=(v-totAnt)/totAnt*100;
       }
       cells+=`<td>${F(v)}</td><td class="${d>=0?'pos':'neg'}">${d!==null?pct(d):'—'}</td>`;
@@ -313,34 +353,46 @@ function renderTabela(){
 let chEvol, chMarca, chPag, pagView='pct';
 function renderEvol(){
   const ls = lojasFiltradas(), fp = selF.value;
-  const vals = MESES.map(m=> fp==='ALL'
-    ? ls.reduce((s,l)=>s+DATA.lojas[l].meses[m].rev,0)
+  const MD = mesesDoAno();
+  const vals = MD.map(m=> (fp==='ALL'||anoSel()==='2025')
+    ? ls.reduce((s,l)=>s+revAno(l,m),0)+extras25(m)
     : ls.reduce((s,l)=>s+((DATA.pagamentos[l]?.[m]?.[fp])||0),0));
   if(chEvol) chEvol.destroy();
   chEvol = new Chart(document.getElementById('chEvol'),{type:'bar',
-    data:{labels:MESES.map(m=>MLBL[m]+'/26'+(PARCIAL[m]?' *':'')),datasets:[{label:'Faturamento',data:vals,backgroundColor:MESES.map(m=>selMes.value!=='ALL'&&m!==selMes.value?'#eccfd0':'#B81D22'),borderRadius:8},
+    data:{labels:MD.map(m=>MLBL[m]+(anoSel()==='2025'?'/25':'/26')),datasets:[{label:'Faturamento',data:vals,backgroundColor:MD.map(m=>selMes.value!=='ALL'&&m!==selMes.value?'#eccfd0':'#B81D22'),borderRadius:8},
       {label:'Tendência',data:vals,type:'line',borderColor:'#E0A426',borderWidth:3,pointBackgroundColor:'#E0A426',pointRadius:5,tension:.3}]},
     options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>fmt(c.raw)+(PARCIAL[MESES[c.dataIndex]]?' (parcial — só ISAIAS)':'')}}},
       scales:{y:{ticks:{callback:v=>'R$ '+(v/1000).toLocaleString('pt-BR')+'k'}}}}});
 }
 function renderMarca(){
   const ds = marcas.map(mk=>({label:mk,backgroundColor:CORES_MARCA[mk],borderRadius:6,
-    data:MESES.map(m=>lojas.filter(l=>DATA.lojas[l].marca===mk&&(incB13||l!==B13)).reduce((s,l)=>s+DATA.lojas[l].meses[m].rev,0))}));
+    data:mesesDoAno().map(m=>lojas.filter(l=>DATA.lojas[l].marca===mk&&(incB13||l!==B13)).reduce((s,l)=>s+revAno(l,m),0))}));
   if(chMarca) chMarca.destroy();
   chMarca = new Chart(document.getElementById('chMarca'),{type:'bar',
-    data:{labels:MESES.map(m=>MLBL[m]+'/26'),datasets:ds},
+    data:{labels:mesesDoAno().map(m=>MLBL[m]+(anoSel()==='2025'?'/25':'/26')),datasets:ds},
     options:{responsive:true,maintainAspectRatio:false,
       plugins:{legend:{position:'bottom'},tooltip:{callbacks:{label:c=>c.dataset.label+': '+fmt(c.raw)}}},
       scales:{y:{ticks:{callback:v=>'R$ '+(v/1000000).toLocaleString('pt-BR')+'M'}}}}});
 }
 function pagData(){
-  const ls = lojasFiltradas(), MA = mesesAtivos();
+  const ls = lojasFiltradas(), MA = mesesAtivos().filter(m=>MESES.includes(m));
   const byF = {};
   formas.forEach(f=>byF[f]=MA.map(m=>ls.reduce((s,l)=>s+((DATA.pagamentos[l]?.[m]?.[f])||0),0)));
   const totM = MA.map((m,i)=>formas.reduce((s,f)=>s+byF[f][i],0));
   return {byF,totM,MA};
 }
 function renderPag(){
+  const cardPag=document.querySelector('#sec-pagamentos .card');
+  let avP=document.getElementById('avisoPag');
+  if(!avP){avP=document.createElement('div');avP.className='aviso';avP.id='avisoPag';avP.style.display='none';cardPag.insertBefore(avP,cardPag.children[2]);}
+  const corpo=[...cardPag.children].filter(el=>el!==avP&&!['H2'].includes(el.tagName)&&!el.classList.contains('sub'));
+  if(anoSel()==='2025'){
+    avP.style.display='block';
+    avP.textContent='📅 A base de 2025 tem apenas o faturamento mensal por loja — sem abertura por forma de pagamento. Volte o filtro Ano para 2026 para ver esta análise.';
+    corpo.forEach(el=>el.style.display='none');
+    return;
+  }
+  avP.style.display='none'; corpo.forEach(el=>el.style.display='');
   const {byF,totM,MA} = pagData();
   const ordF = [...formas].sort((a,b)=>byF[b].reduce((x,y)=>x+y,0)-byF[a].reduce((x,y)=>x+y,0));
   const ds = ordF.map(f=>({label:f,backgroundColor:CORES_PAG[f]||'#999',borderRadius:4,
@@ -397,6 +449,16 @@ let chHoras;
 const DOWS=['Seg','Ter','Qua','Qui','Sex','Sáb','Dom'];
 const MESES_HORA = Object.keys(HDATA).sort();
 function renderHoras(){
+  if(anoSel()==='2025'){
+    const avisoH=document.getElementById('avisoHora');
+    avisoH.style.display='block';
+    avisoH.textContent='📅 A base de 2025 não tem detalhe por hora. Volte o filtro Ano para 2026 (horários disponíveis: JUL e AGO).';
+    document.querySelector('#sec-horas .chartbox').style.display='none';
+    document.getElementById('hmTbl').innerHTML='';
+    document.getElementById('hTituloMes').textContent='';
+    return;
+  }
+  document.querySelector('#sec-horas .chartbox').style.display='';
   const sel = selMes.value;
   const mm = (sel==='ALL') ? MESES_HORA : (MESES_HORA.includes(sel)?[sel]:[]);
   const cardH = document.getElementById('sec-horas');
@@ -437,10 +499,11 @@ function renderHoras(){
 }
 let ch25;
 function renderComp(){
-  const MA = mesesAtivos();                      // meses 2026 selecionados
+  const MA = mesesAtivos().filter(m=>MESES.includes(m));                      // meses 2026 selecionados
   const idx = MA.map(m=>parseInt(m,10)-1);       // índices 0-11 em 2025
   const ls = lojasFiltradas();
-  const lbl = selMes.value==='ALL' ? 'JAN–'+MLBL[MESES[MESES.length-1]] : MLBL[selMes.value];
+  const lbl = (selMes.value==='ALL'||!MESES.includes(selMes.value)) ? 'JAN–'+MLBL[MESES[MESES.length-1]] : MLBL[selMes.value];
+  if(MA.length===0){ MA.push(...MESES); }
   const soma25 = arr => idx.reduce((s,i)=>s+arr[i],0);
   const v25 = ls.reduce((s,l)=>s+(D25.porLoja[l]?soma25(D25.porLoja[l]):0),0);
   const v26 = ls.reduce((s,l)=>s+MA.reduce((x,m)=>x+DATA.lojas[l].meses[m].rev,0),0);
@@ -515,6 +578,7 @@ document.getElementById('tgComp').addEventListener('click',e=>{
 });
 function renderCompMes(){
   const ls = lojasFiltradas();
+  // esta matriz é sempre 2025×2026 — ignora o filtro Ano
   const incExtras = selM.value==='ALL' && selL.value==='ALL';
   const M12L=['JAN','FEV','MAR','ABR','MAI','JUN','JUL','AGO','SET','OUT','NOV','DEZ'];
   // meses exibidos: todos os 12 (ou só o mês do filtro)
@@ -565,6 +629,8 @@ function renderCompMes(){
   }
 }
 function renderAll(){renderKPIs();renderTabela();renderEvol();renderPag();renderHoras();renderComp();renderCompMes();fitKPIs();}
+selAno.addEventListener('change',()=>{popMeses();renderAll();renderMarca();
+  document.querySelector('header h1').textContent='Comparativo de Vendas '+anoSel()+' — '+(anoSel()==='2025'?'JAN a DEZ':'JAN a AGO')+' · Loja a Loja';});
 selMes.addEventListener('change',()=>{renderAll();});
 selM.addEventListener('change',()=>{popLojas();renderAll();});
 selL.addEventListener('change',renderAll);
