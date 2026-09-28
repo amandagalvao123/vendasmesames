@@ -43,6 +43,7 @@ tr.total td{font-weight:800;background:#f9e9e9;color:var(--roxo);border-top:2px 
 .toggle{display:flex;gap:6px;margin-bottom:12px;flex-wrap:wrap;}
 .toggle button{padding:6px 14px;border:1.5px solid var(--roxo);background:#fff;color:var(--roxo);border-radius:20px;font-size:.72rem;font-weight:700;cursor:pointer;}
 .toggle button.on{background:var(--roxo);color:#fff;}
+.preset{padding:8px 10px;border-radius:8px;font-size:.68rem;font-weight:700;cursor:pointer;border:1.5px solid var(--roxo);background:#fff;color:var(--roxo);}
 #tgB13{padding:9px 14px;border-radius:20px;font-size:.72rem;font-weight:800;cursor:pointer;border:1.5px solid var(--roxo);white-space:nowrap;}
 #tgB13.b13on{background:var(--roxo);color:#fff;}
 #tgB13.b13off{background:#fff;color:#9a9a9a;border-color:#ccc;text-decoration:line-through;}
@@ -106,16 +107,17 @@ th:first-child{background:var(--roxo);z-index:3;}
 <a href="#sec-lojas"><span class="ico">🏪</span>Lojas</a>
 <a href="#sec-evolucao"><span class="ico">📈</span>Evolução</a>
 <a href="#sec-horas"><span class="ico">⏰</span>Horários</a>
+<a href="#sec-meta"><span class="ico">🎯</span>Meta</a>
 <a href="#sec-2025"><span class="ico">📅</span>2025</a>
 <a href="#sec-pagamentos"><span class="ico">💳</span>Pagamentos</a>
 </nav>
 <div class="container">
 
-<div class="aviso">📌 <b>Observações:</b><br>
+<details style="margin-bottom:18px;"><summary style="cursor:pointer;font-size:.72rem;color:#9c8888;font-weight:700;">📌 Observações e notas metodológicas (toque para ver)</summary><div class="aviso" style="margin-top:8px;">
 • Base completa <b>JAN–AGO/2026</b> · 17 lojas · 4 marcas · cupons de venda PDV.<br>
 • <b>Aba 2025:</b> base de vendas mensais via sistema (loja × mês). Mapeamento 2025→2026 por numeração das lojas; Açaí Forever somado ao Bigg's 07, Bigg's 08+09 unificados, Casaria 01 = Mapoli; Dona Elza (encerrada) aparece à parte. Comparativo anual usa a base JAN–AGO dos dois anos.<br>
 • <b>CASARIA passou a se chamar MAPOLI</b> a partir de AGO/26 — tratada como a mesma loja, histórico preservado.<br>
-• <b>BIGGS 13 – Arthur Thomas iniciou vendas em 19/05/2026</b> (MAI contém apenas 13 dias de operação da loja — variações % MAI→JUN do B13 refletem isso). Use o botão nos filtros para incluir/excluir a loja e comparar o grupo em base igual.</div>
+• <b>BIGGS 13 – Arthur Thomas iniciou vendas em 19/05/2026</b> (MAI contém apenas 13 dias de operação da loja — variações % MAI→JUN do B13 refletem isso). Use o botão nos filtros para incluir/excluir a loja e comparar o grupo em base igual.</div></details>
 
 <div class="filtros">
 <div><label>Ano</label><select id="fAno"><option value="2026">2026</option><option value="2025">2025</option></select></div>
@@ -132,7 +134,11 @@ th:first-child{background:var(--roxo);z-index:3;}
 <section id="sec-lojas"><div class="card">
 <h2>Painel Resumo por Loja — Comparativo Mensal</h2>
 <div class="sub" id="subTabela">Faturamento por loja, variação % vs mês anterior</div>
-<div class="scrollhint">← deslize para ver todos os meses →</div>
+<div class="toggle" id="tgVisaoLoja">
+<button data-v="det" class="on">Mês a mês</button>
+<button data-v="med">Média mensal</button>
+</div>
+<div class="scrollhint" id="hintLojas">← deslize para ver todos os meses →</div>
 <div class="tblwrap"><table id="tblLojas"><thead></thead><tbody></tbody></table></div>
 </div></section>
 
@@ -158,6 +164,27 @@ th:first-child{background:var(--roxo);z-index:3;}
 <div class="sub">Intensidade de faturamento · quanto mais escuro, maior a venda</div>
 <div class="hmwrap"><table class="hm" id="hmTbl"></table></div>
 <div class="hmleg">Menor <span style="background:#fdeeee"></span><span style="background:#f3b9bb"></span><span style="background:#dd6d71"></span><span style="background:#B81D22"></span><span style="background:#7a1216"></span> Maior</div>
+</div></section>
+
+<section id="sec-meta"><div class="card">
+<h2>🎯 Simulador de Meta — Rateio por Semana e Dia</h2>
+<div class="sub">Digite a meta do mês e veja quanto precisa vender em cada semana e dia da semana · referência: distribuição real de AGO/26 (PDV) · respeita filtros de marca/loja</div>
+<div class="filtros" style="box-shadow:none;padding:0;margin-bottom:14px;">
+<div><label>Meta do mês (R$)</label><input id="metaValor" inputmode="numeric" placeholder="ex.: 7.200.000" style="padding:8px 12px;border:1.5px solid #e5cfcf;border-radius:8px;font-size:16px;font-weight:700;color:var(--roxo);width:160px;"></div>
+<div><label>Mês da meta</label><select id="metaMes"></select></div>
+<div><label>Ano da meta</label><select id="metaAno"><option>2026</option><option selected>2027</option></select></div>
+<div style="display:flex;align-items:flex-end;gap:6px;">
+<button class="preset" data-p="ago">= AGO/26</button>
+<button class="preset" data-p="5">AGO/26 +5%</button>
+<button class="preset" data-p="10">AGO/26 +10%</button>
+</div>
+</div>
+<div class="kpis" id="kpiMeta"></div>
+<h2 style="margin-top:10px;">Meta por Semana</h2>
+<div class="tblwrap"><table id="tblMetaSem"><thead></thead><tbody></tbody></table></div>
+<h2 style="margin-top:22px;">Meta por Dia da Semana</h2>
+<div class="sub">Peso de cada dia calibrado no AGO/26 real · meta/dia é o valor a bater em cada ocorrência do dia no mês</div>
+<div class="tblwrap"><table id="tblMetaDia"><thead></thead><tbody></tbody></table></div>
 </div></section>
 
 <section id="sec-2025"><div class="card">
@@ -287,7 +314,74 @@ function renderKPIs(){
 }
 
 // ===== Tabela lojas =====
+let visaoLoja='det';
+document.getElementById('tgVisaoLoja').addEventListener('click',e=>{
+  if(e.target.tagName!=='BUTTON')return;
+  visaoLoja=e.target.dataset.v;
+  document.querySelectorAll('#tgVisaoLoja button').forEach(b=>b.classList.toggle('on',b===e.target));
+  renderTabela();
+});
+function renderMediaLojas(){
+  const met = anoSel()==='2025' ? 'rev' : selMet.value, fp = selF.value, ls = lojasFiltradas();
+  const MD = mesesDoAno();
+  const AA = anoSel()==='2025'?'/25':'/26';
+  const nomes={'rev':'faturamento','cup':'cupons','tm':'ticket médio'};
+  document.getElementById('subTabela').textContent='Média mensal de '+nomes[met]+' por loja no ano '+anoSel()+' — considera apenas os meses em que a loja operou';
+  document.getElementById('hintLojas').style.display='none';
+  const getV=(l,m)=>{
+    if(anoSel()==='2025') return revAno(l,m);
+    if(met==='rev'&&fp!=='ALL') return (DATA.pagamentos[l]?.[m]?.[fp])||0;
+    return DATA.lojas[l].meses[m][met];
+  };
+  const F = met==='cup'?fmtI:(met==='tm'?fmt2:fmt);
+  const th=document.querySelector('#tblLojas thead'), tb=document.querySelector('#tblLojas tbody');
+  th.innerHTML=`<tr><th>Loja</th><th>Meses ativos</th><th>Média mensal${AA}</th><th>Melhor mês</th><th>Pior mês</th><th>${met==='tm'?'TM do período':'Total '+anoSel()}</th></tr>`;
+  tb.innerHTML='';
+  const rows=ls.map(l=>{
+    const ativos=MD.filter(m=>temDado(l,m));
+    const vals=ativos.map(m=>getV(l,m));
+    const soma=vals.reduce((a,b)=>a+b,0);
+    const media = met==='tm' ? (vals.length?vals.reduce((a,b)=>a+b,0)/vals.length:0) : (ativos.length?soma/ativos.length:0);
+    let iMax=-1,iMin=-1;
+    vals.forEach((v,i)=>{if(iMax<0||v>vals[iMax])iMax=i;if(iMin<0||v<vals[iMin])iMin=i;});
+    let totCol=soma;
+    if(met==='tm'){ // TM do período = receita total / cupons totais
+      const rv=ativos.reduce((s,m)=>s+DATA.lojas[l].meses[m].rev,0);
+      const cp=ativos.reduce((s,m)=>s+DATA.lojas[l].meses[m].cup,0);
+      totCol=cp?rv/cp:0;
+    }
+    return {l,n:ativos.length,media,soma:totCol,
+      max:iMax>=0?{m:ativos[iMax],v:vals[iMax]}:null,
+      min:iMin>=0?{m:ativos[iMin],v:vals[iMin]}:null};
+  }).sort((a,b)=>b.media-a.media);
+  if(anoSel()==='2025'&&selM.value==='ALL'&&selL.value==='ALL'){
+    D25.extras.forEach(e=>{
+      const ativos=[...Array(12).keys()].filter(i=>e.vals[i]>0);
+      if(!ativos.length)return;
+      const soma=e.vals.reduce((a,b)=>a+b,0);
+      rows.push({l:e.nome,extra:true,n:ativos.length,media:soma/ativos.length,soma,
+        max:{m:M12K[ativos[ativos.map(i=>e.vals[i]).indexOf(Math.max(...ativos.map(i=>e.vals[i])))]],v:Math.max(...ativos.map(i=>e.vals[i]))},
+        min:{m:M12K[ativos[ativos.map(i=>e.vals[i]).indexOf(Math.min(...ativos.map(i=>e.vals[i])))]],v:Math.min(...ativos.map(i=>e.vals[i]))}});
+    });
+    rows.sort((a,b)=>b.media-a.media);
+  }
+  let sMed=0,sTot=0,nL=0;
+  rows.forEach(r=>{
+    const mk=r.extra?null:DATA.lojas[r.l].marca;
+    sMed+=r.media; sTot+=r.soma; nL++;
+    tb.insertAdjacentHTML('beforeend',`<tr><td class="mname">${mk?`<span class="tagm tag-${mk}">${mk}</span>`:''}${r.l}</td>
+      <td>${r.n} de ${MD.length}</td><td><b>${F(r.media)}</b></td>
+      <td class="pos">${r.max?MLBL[r.max.m]+' · '+F(r.max.v):'—'}</td>
+      <td class="neg">${r.min?MLBL[r.min.m]+' · '+F(r.min.v):'—'}</td>
+      <td>${F(r.soma)}</td></tr>`);
+  });
+  if(nL>1&&met!=='tm'){
+    tb.insertAdjacentHTML('beforeend',`<tr class="total"><td>TOTAL / soma das médias</td><td></td><td>${F(sMed)}</td><td></td><td></td><td>${F(sTot)}</td></tr>`);
+  }
+}
 function renderTabela(){
+  if(visaoLoja==='med'){ renderMediaLojas(); return; }
+  document.getElementById('hintLojas').style.display='';
   const met = selMet.value, ls = lojasFiltradas(), fp = selF.value;
   if(anoSel()==='2025'&&selMet.value!=='rev') selMet.value='rev';
   selMet.disabled = anoSel()==='2025';
@@ -497,6 +591,82 @@ function renderHoras(){
   }
   document.getElementById('hmTbl').innerHTML=html;
 }
+// ===== Simulador de Meta =====
+const metaMesSel=document.getElementById('metaMes');
+['JAN','FEV','MAR','ABR','MAI','JUN','JUL','AGO','SET','OUT','NOV','DEZ'].forEach((n,i)=>metaMesSel.add(new Option(n,i+1)));
+metaMesSel.value='9';
+const metaInp=document.getElementById('metaValor');
+function parseMeta(){ const d=(metaInp.value||'').split(',')[0].replace(/[^0-9]/g,''); return d?parseInt(d,10):0; }
+metaInp.addEventListener('input',()=>{ 
+  const v=parseMeta();
+  metaInp.value = v? v.toLocaleString('pt-BR') : '';
+  renderMeta();
+});
+metaMesSel.addEventListener('change',renderMeta);
+document.getElementById('metaAno').addEventListener('change',renderMeta);
+const AGO26_TOT = () => Math.round(lojasFiltradas().reduce((s,l)=>s+DATA.lojas[l].meses['08'].rev,0));
+document.querySelectorAll('.preset').forEach(b=>b.addEventListener('click',()=>{
+  const base=AGO26_TOT();
+  const v = b.dataset.p==='ago'?base:Math.round(base*(1+parseInt(b.dataset.p,10)/100));
+  metaInp.value=v.toLocaleString('pt-BR'); renderMeta();
+}));
+function pesosDow(){ // % por dia da semana no AGO/26 real (heat: dow x hora), das lojas filtradas
+  const ls=lojasFiltradas().filter(l=>HDATA['08']&&HDATA['08'].heat[l]);
+  const dw=Array(7).fill(0);
+  ls.forEach(l=>HDATA['08'].heat[l].forEach((linha,d)=>dw[d]+=linha.reduce((a,b)=>a+b,0)));
+  const nAgo=[5,4,4,4,4,5,5]; // ocorrências de cada dow em AGO/2026 (01/08 = sábado)
+  const porDia=dw.map((v,d)=>v/nAgo[d]);       // venda média por ocorrência do dia
+  const somaDia=porDia.reduce((a,b)=>a+b,0);
+  return porDia.map(v=>somaDia?v/somaDia:1/7); // peso relativo de UM dia de cada tipo
+}
+function renderMeta(){
+  const meta=parseMeta();
+  const mm=parseInt(metaMesSel.value,10), aa=parseInt(document.getElementById('metaAno').value,10);
+  const pes=pesosDow();
+  const nDias=new Date(aa,mm,0).getDate();
+  const datas=[...Array(nDias)].map((_,i)=>{const dt=new Date(aa,mm-1,i+1);return {dia:i+1,dow:(dt.getDay()+6)%7};});
+  const pesoTot=datas.reduce((s,d)=>s+pes[d.dow],0);
+  const valorDia=d=>meta*pes[d.dow]/pesoTot;
+  // KPIs
+  const el=document.getElementById('kpiMeta'); el.innerHTML='';
+  const add=(a,b,c)=>el.insertAdjacentHTML('beforeend',`<div class="kpi"><div class="lbl">${a}</div><div class="val">${b}</div>${c?`<div class="sub">${c}</div>`:''}</div>`);
+  const base=AGO26_TOT();
+  add('Meta '+MLBL[String(mm).padStart(2,'0')]+'/'+String(aa).slice(2), meta?fmt(meta):'—', meta&&base?pct((meta/base-1)*100)+' vs AGO/26 real':'digite a meta acima');
+  add('Média necessária/dia', meta?fmt(Math.round(meta/nDias)):'—', nDias+' dias no mês');
+  const sex=datas.filter(d=>d.dow===4).length;
+  add('Meta por sexta-feira', meta?fmt(Math.round(meta*pes[4]/pesoTot)):'—', sex+' sextas no mês');
+  // tabela semanas (1-7, 8-14, 15-21, 22-28, 29+)
+  const th1=document.querySelector('#tblMetaSem thead'), tb1=document.querySelector('#tblMetaSem tbody');
+  th1.innerHTML='<tr><th>Semana</th><th>Período</th><th>Dias</th><th>Meta (R$)</th><th>% do mês</th><th>Média/dia</th></tr>';
+  tb1.innerHTML='';
+  let sem=[[],[],[],[],[]];
+  datas.forEach(d=>sem[Math.min(Math.floor((d.dia-1)/7),4)].push(d));
+  sem.forEach((ds,i)=>{
+    if(!ds.length)return;
+    const v=ds.reduce((s,d)=>s+valorDia(d),0);
+    tb1.insertAdjacentHTML('beforeend',`<tr><td class="mname">Semana ${i+1}</td>
+      <td>${String(ds[0].dia).padStart(2,'0')} a ${String(ds[ds.length-1].dia).padStart(2,'0')}/${String(mm).padStart(2,'0')}</td>
+      <td>${ds.length}${ds.length<7?' <span style="color:#c94f7c">(parcial)</span>':''}</td>
+      <td><b>${meta?fmt(Math.round(v)):'—'}</b></td>
+      <td><b>${(pesoTot?ds.reduce((s,d)=>s+pes[d.dow],0)/pesoTot*100:0).toLocaleString('pt-BR',{maximumFractionDigits:1})}%</b></td>
+      <td>${meta?fmt(Math.round(v/ds.length)):'—'}</td></tr>`);
+  });
+  tb1.insertAdjacentHTML('beforeend',`<tr class="total"><td>TOTAL</td><td>${MLBL[String(mm).padStart(2,'0')]}/${aa}</td><td>${nDias}</td><td>${meta?fmt(meta):'—'}</td><td>100%</td><td>${meta?fmt(Math.round(meta/nDias)):'—'}</td></tr>`);
+  // tabela dias da semana
+  const th2=document.querySelector('#tblMetaDia thead'), tb2=document.querySelector('#tblMetaDia tbody');
+  th2.innerHTML='<tr><th>Dia</th><th>Peso (ref. AGO/26)</th><th>Ocorrências no mês</th><th>Meta por dia</th><th>Meta total no mês</th></tr>';
+  tb2.innerHTML='';
+  const DOWS2=['Segunda','Terça','Quarta','Quinta','Sexta','Sábado','Domingo'];
+  const pesoSemana=pes.reduce((a,b)=>a+b,0);
+  DOWS2.forEach((nome,d)=>{
+    const n=datas.filter(x=>x.dow===d).length;
+    const vDia=meta?meta*pes[d]/pesoTot:0;
+    tb2.insertAdjacentHTML('beforeend',`<tr><td class="mname">${nome}</td>
+      <td>${(pes[d]/pesoSemana*100).toLocaleString('pt-BR',{maximumFractionDigits:1})}%</td>
+      <td>${n}×</td><td><b>${meta?fmt(Math.round(vDia)):'—'}</b></td>
+      <td>${meta?fmt(Math.round(vDia*n)):'—'}</td></tr>`);
+  });
+}
 let ch25;
 function renderComp(){
   const MA = mesesAtivos().filter(m=>MESES.includes(m));                      // meses 2026 selecionados
@@ -628,7 +798,7 @@ function renderCompMes(){
       midx.map((_,i)=>cel(TA[i],TB[i],temT[i])).join('')+totT+'</tr>');
   }
 }
-function renderAll(){renderKPIs();renderTabela();renderEvol();renderPag();renderHoras();renderComp();renderCompMes();fitKPIs();}
+function renderAll(){renderKPIs();renderTabela();renderEvol();renderPag();renderHoras();renderComp();renderCompMes();renderMeta();fitKPIs();}
 selAno.addEventListener('change',()=>{popMeses();renderAll();renderMarca();
   document.querySelector('header h1').textContent='Comparativo de Vendas '+anoSel()+' — '+(anoSel()==='2025'?'JAN a DEZ':'JAN a AGO')+' · Loja a Loja';});
 selMes.addEventListener('change',()=>{renderAll();});
@@ -644,7 +814,7 @@ tabs.forEach(a=>a.addEventListener('click',e=>{
   e.preventDefault();
   document.querySelector(a.getAttribute('href')).scrollIntoView({behavior:'smooth'});
 }));
-const secs = ['sec-resumo','sec-lojas','sec-evolucao','sec-horas','sec-2025','sec-pagamentos'].map(id=>document.getElementById(id));
+const secs = ['sec-resumo','sec-lojas','sec-evolucao','sec-horas','sec-meta','sec-2025','sec-pagamentos'].map(id=>document.getElementById(id));
 const obs = new IntersectionObserver(es=>{
   es.forEach(en=>{ if(en.isIntersecting){
     tabs.forEach(a=>a.classList.toggle('on', a.getAttribute('href')==='#'+en.target.id));
