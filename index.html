@@ -168,7 +168,7 @@ th:first-child{background:var(--roxo);z-index:3;}
 <div class="tblwrap" style="margin-top:14px;"><table id="tbl2025"><thead></thead><tbody></tbody></table></div>
 <div class="sub" style="margin-top:8px;padding-left:0;">* Δ% distorcido: a loja abriu durante 2025, então a base do ano anterior é parcial — compare mês a mês na matriz abaixo.</div>
 <h2 style="margin-top:24px;">Loja × Mês — Ano a Ano</h2>
-<div class="sub">Cada célula compara o mês de 2026 com o mesmo mês de 2025 · Bigg's 08 e 09 somados</div>
+<div class="sub">JAN a DEZ · cada célula compara 2026 com o mesmo mês de 2025 (SET–DEZ/26 aparecem quando fecharem) · Bigg's 08 e 09 somados</div>
 <div class="toggle" id="tgComp">
 <button data-v="delta" class="on">Δ% 26×25</button>
 <button data-v="v26">R$ 2026</button>
@@ -514,36 +514,54 @@ document.getElementById('tgComp').addEventListener('click',e=>{
   renderCompMes();
 });
 function renderCompMes(){
-  const MA = mesesAtivos();
   const ls = lojasFiltradas();
   const incExtras = selM.value==='ALL' && selL.value==='ALL';
+  const M12L=['JAN','FEV','MAR','ABR','MAI','JUN','JUL','AGO','SET','OUT','NOV','DEZ'];
+  // meses exibidos: todos os 12 (ou só o mês do filtro)
+  const midx = selMes.value==='ALL' ? [...Array(12).keys()] : [parseInt(selMes.value,10)-1];
+  const m26 = i => { const m=String(i+1).padStart(2,'0'); return MESES.includes(m)?m:null; };
   const th=document.querySelector('#tblMes25 thead'), tb=document.querySelector('#tblMes25 tbody');
-  th.innerHTML='<tr><th>Loja</th>'+MA.map(m=>`<th>${MLBL[m]}</th>`).join('')+`<th>${selMes.value==='ALL'?'JAN–'+MLBL[MESES[MESES.length-1]]:'Total'}</th></tr>`;
+  const totLbl = compView==='v25' ? (selMes.value==='ALL'?'Ano 2025':'Total')
+               : compView==='v26' ? (selMes.value==='ALL'?'JAN–'+MLBL[MESES[MESES.length-1]]+'/26':'Total')
+               : (selMes.value==='ALL'?'Acum. JAN–'+MLBL[MESES[MESES.length-1]]:'Total');
+  th.innerHTML='<tr><th>Loja</th>'+midx.map(i=>`<th>${M12L[i]}</th>`).join('')+`<th>${totLbl}</th></tr>`;
   tb.innerHTML='';
-  const cel=(a,b)=>{ // a=2025, b=2026
+  const cel=(a,b,tem26)=>{
     if(compView==='v25') return `<td>${a>0?fmt(a):'—'}</td>`;
-    if(compView==='v26') return `<td>${b>0?fmt(b):'—'}</td>`;
-    if(!a||!b) return '<td>—</td>';
+    if(compView==='v26') return `<td>${tem26&&b>0?fmt(b):'—'}</td>`;
+    if(!tem26||!a||!b) return '<td>—</td>';
     const d=(b/a-1)*100;
     return `<td class="${d>=0?'pos':'neg'}"><b>${pct(d)}</b></td>`;
   };
-  const rows=ls.map(l=>({l,
-    a:MA.map(m=>D25.porLoja[l]?D25.porLoja[l][parseInt(m,10)-1]:0),
-    b:MA.map(m=>DATA.lojas[l].meses[m].rev)
-  })).sort((x,y)=>y.b.reduce((s,v)=>s+v,0)-x.b.reduce((s,v)=>s+v,0));
+  const rows=ls.map(l=>({l, extra:false,
+    a:midx.map(i=>D25.porLoja[l]?D25.porLoja[l][i]:0),
+    b:midx.map(i=>{const m=m26(i);return m?DATA.lojas[l].meses[m].rev:0;}),
+    t:midx.map(i=>!!m26(i))
+  })).sort((x,y)=>y.b.reduce((s,v)=>s+v,0)-x.b.reduce((s,v)=>s+v,0)||y.a.reduce((s,v)=>s+v,0)-x.a.reduce((s,v)=>s+v,0));
   if(incExtras) D25.extras.forEach(e=>rows.push({l:e.nome, extra:true,
-    a:MA.map(m=>e.vals[parseInt(m,10)-1]), b:MA.map(()=>0)}));
-  const TA=MA.map(()=>0), TB=MA.map(()=>0);
+    a:midx.map(i=>e.vals[i]), b:midx.map(()=>0), t:midx.map(()=>false)}));
+  const TA=midx.map(()=>0), TB=midx.map(()=>0);
   rows.forEach(r=>{
-    MA.forEach((m,i)=>{TA[i]+=r.a[i];TB[i]+=r.b[i];});
+    midx.forEach((_,i)=>{TA[i]+=r.a[i];TB[i]+=r.b[i];});
     const mk=r.extra?null:DATA.lojas[r.l].marca;
-    const sa=r.a.reduce((s,v)=>s+v,0), sb=r.b.reduce((s,v)=>s+v,0);
+    // total da linha conforme a visão
+    const sa26=r.a.filter((_,i)=>r.t[i]).reduce((s,v)=>s+v,0);   // 2025 na base comparável
+    const sb=r.b.reduce((s,v)=>s+v,0);
+    const saFull=r.a.reduce((s,v)=>s+v,0);
+    const totCel = compView==='v25' ? cel(saFull,0,false)
+                 : compView==='v26' ? cel(0,sb,true)
+                 : cel(sa26,sb,true);
     tb.insertAdjacentHTML('beforeend',`<tr><td class="mname">${mk?`<span class="tagm tag-${mk}">${mk}</span>`:''}${r.l}</td>`+
-      MA.map((m,i)=>cel(r.a[i],r.b[i])).join('')+cel(sa,sb)+'</tr>');
+      midx.map((_,i)=>cel(r.a[i],r.b[i],r.t[i])).join('')+totCel+'</tr>');
   });
   if(rows.length>1){
+    const temT=midx.map(i=>!!m26(i));
+    const TA26=TA.filter((_,i)=>temT[i]).reduce((s,v)=>s+v,0);
+    const totT = compView==='v25' ? cel(TA.reduce((s,v)=>s+v,0),0,false)
+               : compView==='v26' ? cel(0,TB.reduce((s,v)=>s+v,0),true)
+               : cel(TA26,TB.reduce((s,v)=>s+v,0),true);
     tb.insertAdjacentHTML('beforeend',`<tr class="total"><td>TOTAL</td>`+
-      MA.map((m,i)=>cel(TA[i],TB[i])).join('')+cel(TA.reduce((s,v)=>s+v,0),TB.reduce((s,v)=>s+v,0))+'</tr>');
+      midx.map((_,i)=>cel(TA[i],TB[i],temT[i])).join('')+totT+'</tr>');
   }
 }
 function renderAll(){renderKPIs();renderTabela();renderEvol();renderPag();renderHoras();renderComp();renderCompMes();fitKPIs();}
