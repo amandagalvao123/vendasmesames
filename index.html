@@ -464,6 +464,8 @@ function renderTabela(){
   }
   if(rows.length>1 && met!=='tm'){
     let cells='';
+    let tbi=-1,twi=-1;
+    if(met==='rev') tot.forEach((v,i)=>{if(v>0){if(tbi<0||v>tot[tbi])tbi=i; if(twi<0||v<tot[twi])twi=i;}});
     tot.forEach((v,i)=>{
       const mIdx = mesesDoAno().indexOf(MA[i]);
       let d=null;
@@ -472,7 +474,8 @@ function renderTabela(){
         const totAnt=ls.reduce((s,l)=>s+getV(l,antM),0)+extras25(antM);
         if(totAnt) d=(v-totAnt)/totAnt*100;
       }
-      cells+=`<td>${F(v)}</td><td class="${d>=0?'pos':'neg'}">${d!==null?pct(d):'—'}</td>`;
+      const hl = i===tbi?' style="background:#c6efce;"':(i===twi&&twi!==tbi?' style="background:#ffc7ce;"':'');
+      cells+=`<td${hl}>${F(v)}</td><td class="${d>=0?'pos':'neg'}">${d!==null?pct(d):'—'}</td>`;
     });
     tb.insertAdjacentHTML('beforeend',`<tr class="total"><td>TOTAL</td>${cells}${MA.length>1?`<td>${F(tot.reduce((a,b)=>a+b,0))}</td>`:''}</tr>`);
   }
@@ -987,8 +990,14 @@ function renderCompMes(){
     const totT = compView==='v25' ? cel(TA.reduce((s,v)=>s+v,0),0,false,null)
                : compView==='v26' ? cel(0,TB.reduce((s,v)=>s+v,0),true,null)
                : cel(TA26,TB.reduce((s,v)=>s+v,0),true,null);
+    // melhor/pior mês do TOTAL nas visões R$
+    let tbi=-1,twi=-1;
+    if(compView==='v25'||compView==='v26'){
+      const tv=midx.map((_,i)=>compView==='v25'?TA[i]:(temT[i]?TB[i]:0));
+      tv.forEach((v,i)=>{if(v>0){if(tbi<0||v>tv[tbi])tbi=i; if(twi<0||v<tv[twi])twi=i;}});
+    }
     tb.insertAdjacentHTML('beforeend',`<tr class="total"><td>TOTAL</td>`+
-      midx.map((_,i)=>cel(TA[i],TB[i],temT[i],null)).join('')+totT+'</tr>');
+      midx.map((_,i)=>cel(TA[i],TB[i],temT[i], i===tbi?'best':(i===twi&&twi!==tbi?'worst':null))).join('')+totT+'</tr>');
   }
 }
 function renderAll(){renderKPIs();renderTabela();renderEvol();renderPag();renderHoras();renderComp();renderCompMes();renderMeta();fitKPIs();}
