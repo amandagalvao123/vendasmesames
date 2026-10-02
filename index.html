@@ -232,6 +232,7 @@ th:first-child{background:var(--roxo);z-index:3;}
 <button data-v="delta" class="on">Δ% 26×25</button>
 <button data-v="v26">R$ 2026</button>
 <button data-v="v25">R$ 2025</button>
+<button data-v="lado">📑 25 | 26</button>
 <button data-v="rk26">🏆 Ranking 26</button>
 <button data-v="rk25">🏆 Ranking 25</button>
 </div>
@@ -478,6 +479,12 @@ function renderTabela(){
       cells+=`<td${hl}>${F(v)}</td><td class="${d>=0?'pos':'neg'}">${d!==null?pct(d):'—'}</td>`;
     });
     tb.insertAdjacentHTML('beforeend',`<tr class="total"><td>TOTAL</td>${cells}${MA.length>1?`<td>${F(tot.reduce((a,b)=>a+b,0))}</td>`:''}</tr>`);
+    if(met==='rev'&&MA.length>1){
+      let rc=rankMesesRow(tot, MA.length, '1\u00ba = melhor m\u00eas');
+      // tabela detalhada tem 2 colunas por m\u00eas (valor + \u0394%): intercalar c\u00e9lulas vazias
+      rc=rc.replace(/<\/td><td style=/g,'</td><td></td><td style=').replace(/<\/td><td>\u2014<\/td>/g,'</td><td></td><td>\u2014</td>');
+      tb.insertAdjacentHTML('beforeend', rc);
+    }
   }
 }
 
@@ -869,7 +876,7 @@ function renderComp(){
       scales:{y:{ticks:{callback:v=>'R$ '+(v/1000000).toLocaleString('pt-BR')+'M'}}}}});
   // tabela loja a loja
   const th=document.querySelector('#tbl2025 thead'), tb=document.querySelector('#tbl2025 tbody');
-  th.innerHTML=`<tr><th>Loja</th><th>${lbl}/25</th><th>${lbl}/26</th><th>Δ 26×25</th><th>Ano 2025</th><th style="text-align:left">Obs.</th></tr>`;
+  th.innerHTML=`<tr><th>#</th><th>Loja</th><th>${lbl}/25</th><th>${lbl}/26</th><th>Δ 26×25</th><th>Ano 2025</th><th style="text-align:left">Obs.</th></tr>`;
   tb.innerHTML='';
   const M12L=['JAN','FEV','MAR','ABR','MAI','JUN','JUL','AGO','SET','OUT','NOV','DEZ'];
   function nota(l){
@@ -887,23 +894,25 @@ function renderComp(){
     const b=MA.reduce((x,m)=>x+DATA.lojas[l].meses[m].rev,0);
     return {l,a,b,ano:D25.porLoja[l]?D25.porLoja[l].reduce((x,y)=>x+y,0):null,nt:nota(l)};
   }).sort((x,y)=>(y.b)-(x.b));
-  let T25=0,T26=0;
+  let T25=0,T26=0,posN=0;
+  const medalPos=p=>p===1?' \u{1F947}':(p===2?' \u{1F948}':(p===3?' \u{1F949}':''));
   linhas.forEach(r=>{
     const mk=DATA.lojas[r.l].marca;
     const d=(r.a&&r.b)?((r.b/r.a-1)*100):null;
     T25+=r.a||0; T26+=r.b;
-    tb.insertAdjacentHTML('beforeend',`<tr><td class="mname"><span class="tagm tag-${mk}">${mk}</span>${r.l}</td>
+    posN++;
+    tb.insertAdjacentHTML('beforeend',`<tr><td style="${posN<=3?'background:#fdf3d7;':''}"><b>${posN}\u00ba</b>${medalPos(posN)}</td><td class="mname"><span class="tagm tag-${mk}">${mk}</span>${r.l}</td>
       <td>${r.a!==null&&r.a>0?fmt(r.a):'<span style="color:#9c8888">nova 2026</span>'}</td><td>${fmt(r.b)}</td>
       <td class="${d>=0?'pos':'neg'}">${d!==null?pct(d)+(r.nt.ast?' *':''):'—'}</td><td>${r.ano?fmt(r.ano):'—'}</td>
       <td style="text-align:left;color:#8a6060;font-size:.7rem;">${r.nt.txt||''}</td></tr>`);
   });
   if(incExtras) D25.extras.forEach(e=>{
     const a=soma25(e.vals); T25+=a;
-    tb.insertAdjacentHTML('beforeend',`<tr><td class="mname">${e.nome}</td><td>${fmt(a)}</td><td><span style="color:#9c8888">—</span></td><td class="neg">-100,0%</td><td>${fmt(e.vals.reduce((x,y)=>x+y,0))}</td><td style="text-align:left;color:#8a6060;font-size:.7rem;">operou até DEZ/25</td></tr>`);
+    tb.insertAdjacentHTML('beforeend',`<tr><td>\u2014</td><td class="mname">${e.nome}</td><td>${fmt(a)}</td><td><span style="color:#9c8888">—</span></td><td class="neg">-100,0%</td><td>${fmt(e.vals.reduce((x,y)=>x+y,0))}</td><td style="text-align:left;color:#8a6060;font-size:.7rem;">operou até DEZ/25</td></tr>`);
   });
   if(linhas.length>1){
     const d=T25?((T26/T25-1)*100):null;
-    tb.insertAdjacentHTML('beforeend',`<tr class="total"><td>TOTAL</td><td>${fmt(T25)}</td><td>${fmt(T26)}</td><td class="${d>=0?'pos':'neg'}">${d!==null?pct(d):'—'}</td><td></td><td></td></tr>`);
+    tb.insertAdjacentHTML('beforeend',`<tr class="total"><td></td><td>TOTAL</td><td>${fmt(T25)}</td><td>${fmt(T26)}</td><td class="${d>=0?'pos':'neg'}">${d!==null?pct(d):'—'}</td><td></td><td></td></tr>`);
   }
 }
 let compView='delta';
@@ -913,6 +922,61 @@ document.getElementById('tgComp').addEventListener('click',e=>{
   document.querySelectorAll('#tgComp button').forEach(b=>b.classList.toggle('on',b===e.target));
   renderCompMes();
 });
+function renderLado(midx,m26,th,tb){
+  const ls = lojasFiltradas();
+  const incExtras = selM.value==='ALL' && selL.value==='ALL';
+  const M12L=['JAN','FEV','MAR','ABR','MAI','JUN','JUL','AGO','SET','OUT','NOV','DEZ'];
+  document.getElementById('legComp').style.display='block';
+  th.innerHTML='<tr><th>Loja</th>'+midx.map(i=>`<th>${M12L[i]}/25</th><th>${M12L[i]}/26</th>`).join('')+'<th>Ano 2025</th><th>JAN\u2013'+MLBL[MESES[MESES.length-1]]+'/26</th></tr>';
+  tb.innerHTML='';
+  const rows=ls.map(l=>({l, extra:false,
+    a:midx.map(i=>D25.porLoja[l]?D25.porLoja[l][i]:0),
+    b:midx.map(i=>{const m=m26(i);return m?DATA.lojas[l].meses[m].rev:0;}),
+    t:midx.map(i=>!!m26(i))
+  })).sort((x,y)=>y.b.reduce((s,v)=>s+v,0)-x.b.reduce((s,v)=>s+v,0)||y.a.reduce((s,v)=>s+v,0)-x.a.reduce((s,v)=>s+v,0));
+  if(incExtras) D25.extras.forEach(e=>rows.push({l:e.nome, extra:true,
+    a:midx.map(i=>e.vals[i]), b:midx.map(()=>0), t:midx.map(()=>false)}));
+  const TA=midx.map(()=>0), TB=midx.map(()=>0);
+  const mk25='background:#f6efef;', mk26='background:#fdf4f4;';
+  const celV=(v,base,hl)=>{
+    if(!(v>0)) return `<td style="${base}">\u2014</td>`;
+    const st=hl==='best'?'background:#c6efce;font-weight:800;':(hl==='worst'?'background:#ffc7ce;font-weight:800;':base);
+    return `<td style="${st}">${fmt(v)}</td>`;
+  };
+  rows.forEach(r=>{
+    midx.forEach((_,i)=>{TA[i]+=r.a[i];TB[i]+=r.b[i];});
+    const mk=r.extra?null:DATA.lojas[r.l].marca;
+    let b25=-1,w25=-1,b26=-1,w26=-1;
+    r.a.forEach((v,i)=>{if(v>0){if(b25<0||v>r.a[b25])b25=i; if(w25<0||v<r.a[w25])w25=i;}});
+    r.b.forEach((v,i)=>{if(v>0&&r.t[i]){if(b26<0||v>r.b[b26])b26=i; if(w26<0||v<r.b[w26])w26=i;}});
+    const cells=midx.map((_,i)=>
+      celV(r.a[i],mk25, i===b25?'best':(i===w25&&w25!==b25?'worst':null))+
+      celV(r.t[i]?r.b[i]:0,mk26, i===b26?'best':(i===w26&&w26!==b26?'worst':null))
+    ).join('');
+    const sa=r.a.reduce((s,v)=>s+v,0), sb=r.b.reduce((s,v)=>s+v,0);
+    tb.insertAdjacentHTML('beforeend',`<tr><td class="mname">${mk?`<span class="tagm tag-${mk}">${mk}</span>`:''}${r.l}</td>${cells}<td style="${mk25}"><b>${sa>0?fmt(sa):'\u2014'}</b></td><td style="${mk26}"><b>${sb>0?fmt(sb):'\u2014'}</b></td></tr>`);
+  });
+  if(rows.length>1){
+    let tb25=-1,tw25=-1,tb26=-1,tw26=-1;
+    TA.forEach((v,i)=>{if(v>0){if(tb25<0||v>TA[tb25])tb25=i; if(tw25<0||v<TA[tw25])tw25=i;}});
+    TB.forEach((v,i)=>{if(v>0){if(tb26<0||v>TB[tb26])tb26=i; if(tw26<0||v<TB[tw26])tw26=i;}});
+    const cellsT=midx.map((_,i)=>
+      celV(TA[i],'', i===tb25?'best':(i===tw25&&tw25!==tb25?'worst':null))+
+      celV(TB[i],'', i===tb26?'best':(i===tw26&&tw26!==tb26?'worst':null))
+    ).join('');
+    tb.insertAdjacentHTML('beforeend',`<tr class="total"><td>TOTAL</td>${cellsT}<td>${fmt(TA.reduce((s,v)=>s+v,0))}</td><td>${fmt(TB.reduce((s,v)=>s+v,0))}</td></tr>`);
+    // rankings dos meses, um por ano, intercalados nas colunas do seu ano
+    const ord25=TA.filter(v=>v>0).sort((a,b)=>b-a), ord26=TB.filter(v=>v>0).sort((a,b)=>b-a);
+    const medal=p=>p===1?' \u{1F947}':(p===2?' \u{1F948}':(p===3?' \u{1F949}':''));
+    const rkCell=(v,ord)=>{
+      if(!(v>0)) return '<td>\u2014</td>';
+      const p=ord.indexOf(v)+1, n=ord.length;
+      const bg=p===1?'background:#c6efce;':(p===n?'background:#ffc7ce;':(p<=3?'background:#fdf3d7;':''));
+      return `<td style="${bg}font-weight:800;color:${p===1?'#1e8e5a':(p===n?'#B81D22':'#8a6060')};">${p}\u00ba${medal(p)}</td>`;
+    };
+    tb.insertAdjacentHTML('beforeend',`<tr><td class="mname" style="font-size:.68rem;color:#8a6060;">\u{1F3C6} Ranking dos meses</td>${midx.map((_,i)=>rkCell(TA[i],ord25)+rkCell(TB[i],ord26)).join('')}<td colspan="2" style="font-size:.63rem;color:#8a6060;">1\u00ba = melhor de cada ano</td></tr>`);
+  }
+}
 function renderCompMes(){
   const ls = lojasFiltradas();
   // esta matriz é sempre 2025×2026 — ignora o filtro Ano
@@ -922,7 +986,9 @@ function renderCompMes(){
   const m26 = i => { const m=String(i+1).padStart(2,'0'); return MESES.includes(m)?m:null; };
   const th=document.querySelector('#tblMes25 thead'), tb=document.querySelector('#tblMes25 tbody');
   const isRank = compView==='rk26'||compView==='rk25';
+  const isLado = compView==='lado';
   document.getElementById('legComp').style.display=(isRank||compView==='v25'||compView==='v26')?'block':'none';
+  if(isLado){ renderLado(midx,m26,th,tb); return; }
   const totLbl = compView==='v25' ? (selMes.value==='ALL'?'Ano 2025':'Total')
                : compView==='v26' ? (selMes.value==='ALL'?'JAN\u2013'+MLBL[MESES[MESES.length-1]]+'/26':'Total')
                : compView==='rk26' ? 'Consolidado 26'
@@ -954,8 +1020,8 @@ function renderCompMes(){
     if(compView==='v25') return `<td${style}>${a>0?fmt(a):'\u2014'}</td>`;
     if(compView==='v26') return `<td${style}>${tem26&&b>0?fmt(b):'\u2014'}</td>`;
     if(!tem26||!a||!b) return '<td>\u2014</td>';
-    const d=(b/a-1)*100;
-    return `<td class="${d>=0?'pos':'neg'}"><b>${pct(d)}</b></td>`;
+    const d=(b/a-1)*100, dif=b-a;
+    return `<td class="${d>=0?'pos':'neg'}"><b>${pct(d)}</b><br><span style="font-size:.63rem;opacity:.85;">${(dif>=0?'+':'-')+fmt(Math.abs(Math.round(dif)))}</span></td>`;
   };
   const TA=midx.map(()=>0), TB=midx.map(()=>0);
   const rankers = isRank ? midx.map((_,i)=>rankCol(i)) : null;
@@ -998,6 +1064,10 @@ function renderCompMes(){
     }
     tb.insertAdjacentHTML('beforeend',`<tr class="total"><td>TOTAL</td>`+
       midx.map((_,i)=>cel(TA[i],TB[i],temT[i], i===tbi?'best':(i===twi&&twi!==tbi?'worst':null))).join('')+totT+'</tr>');
+    if(compView==='v25'||compView==='v26'){
+      const tv=midx.map((_,i)=>compView==='v25'?TA[i]:(temT[i]?TB[i]:0));
+      tb.insertAdjacentHTML('beforeend', rankMesesRow(tv, midx.length, '1\u00ba = melhor m\u00eas'));
+    }
   }
 }
 function renderAll(){renderKPIs();renderTabela();renderEvol();renderPag();renderHoras();renderComp();renderCompMes();renderMeta();fitKPIs();}
@@ -1008,6 +1078,20 @@ selM.addEventListener('change',()=>{popLojas();renderAll();});
 selL.addEventListener('change',renderAll);
 selF.addEventListener('change',renderAll);
 selMet.addEventListener('change',renderTabela);
+// ranking completo dos meses de um vetor de totais (1º = maior)
+function rankMesesRow(vals, nCols, labelTotal){
+  const ord=vals.filter(v=>v>0).sort((a,b)=>b-a);
+  const n=ord.length;
+  const medal=p=>p===1?' \u{1F947}':(p===2?' \u{1F948}':(p===3?' \u{1F949}':''));
+  let cells=vals.map(v=>{
+    if(!(v>0)) return '<td>\u2014</td>';
+    const p=ord.indexOf(v)+1;
+    const cor=p===1?'#1e8e5a':(p===n?'#B81D22':'#8a6060');
+    const bg=p===1?'background:#c6efce;':(p===n?'background:#ffc7ce;':(p<=3?'background:#fdf3d7;':''));
+    return `<td style="${bg}color:${cor};font-weight:800;">${p}\u00ba${medal(p)}</td>`;
+  }).join('');
+  return `<tr><td class="mname" style="font-size:.68rem;color:#8a6060;">\u{1F3C6} Ranking do m\u00eas (total)</td>${cells}<td style="font-size:.63rem;color:#8a6060;">${labelTotal||''}</td></tr>`;
+}
 // ===== Exportação Excel (visual, colorido) =====
 function xlsNum(txt){
   const t=txt.trim();
