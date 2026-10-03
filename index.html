@@ -178,7 +178,7 @@ th:first-child{background:var(--roxo);z-index:3;}
 
 <section id="sec-cmv"><div class="card">
 <h2>📚 Novo Controle de CMV — Apresentação aos Gerentes</h2>
-<div class="sub">Meta OUT/26 por loja: <b>venda = OUT/25 da própria loja</b> · <b>CMV do cardápio</b> = média da planilha de cardápio da loja · nas 4 lojas com Dell'Iris (Biggs 02, Biggs 12, Isaías 01 e 02) a meta soma o faturamento da dark kitchen e a verba usa o CMV Dell'Iris de 26,5% nessa parcela · Biggs 08 e 09, Rob's e Mapoli sem CMV definido</div>
+<div class="sub">Meta por loja (OUT, NOV ou DEZ/26 — escolha acima): <b>venda = mesmo mês de 2025 da própria loja</b> · <b>CMV ficha técnica (meta)</b> = média da ficha técnica aplicada ao cardápio da loja · nas 4 lojas com Dell'Iris (Biggs 02, Biggs 12, Isaías 01 e 02) a meta soma R$ 50.000 da dark kitchen e o CMV da ficha técnica já considera loja + Dell'Iris · Biggs 08 e 09, Rob's e Mapoli sem CMV definido</div>
 <div class="aviso" style="background:#f3f9f4;border-left-color:#1e8e5a;color:#1e5e3e;">
 <b>Como funciona o controle, em 3 passos:</b><br>
 1️⃣ <b>Meta de venda da semana</b> — a meta do mês (OUT/25 da loja) rateada pelo peso real de cada dia da semana.<br>
@@ -186,16 +186,21 @@ th:first-child{background:var(--roxo);z-index:3;}
 3️⃣ <b>Acompanhamento semanal</b> — gerente lança venda e compras realizadas; o painel mostra o CMV da semana e o farol: 🟢 no teórico · 🟡 até 4pp acima · 🔴 mais de 4pp.</div>
 <div class="filtros" style="box-shadow:none;padding:0;margin-bottom:14px;">
 <div><label>Loja</label><select id="cmvLoja"></select></div>
+<div class="fitem"><label>Mês da meta</label><select id="cmvMes"><option value="OUT">OUT/26</option><option value="NOV">NOV/26</option><option value="DEZ">DEZ/26</option></select></div>
 </div>
 <div class="kpis" id="kpiCmv"></div>
-<h2 style="margin-top:8px;">Acompanhamento Semanal — OUT/2026</h2>
+<h2 style="margin-top:8px;">Acompanhamento Semanal — <span id="cmvTit1">OUT</span>/2026</h2>
 <div class="sub">Meta e verba calculadas automaticamente · semanas do calendário real de outubro (dom–sáb) · digite o realizado da semana pra ver o CMV e o farol (valores digitados não ficam salvos ao fechar a página)</div>
 <div class="scrollhint">← deslize para ver todas as colunas →</div>
 <div class="tblwrap"><table id="tblCmvSem"><thead></thead><tbody></tbody></table></div>
-<h2 style="margin-top:24px;">Visão Geral — Metas de OUT/26 por Loja</h2>
+<h2 style="margin-top:24px;">Visão Geral — Metas de <span id="cmvTit2">OUT</span>/26 por Loja</h2>
 <div class="sub">* Desvio financeiro oficial do DRE Voxel (gap × faturamento líquido de itens de AGO/26) — mesma fonte da análise de CMV</div>
 <div class="tblwrap"><table id="tblCmvGeral"><thead></thead><tbody></tbody></table></div>
-</div></section>
+</div><h2 style="margin-top:24px;">Resumo Q4 — Últimos 90 dias de 2026</h2>
+<div class="sub">Meta e verba de compras de OUT, NOV e DEZ/26 lado a lado · meta = mês/25 da loja + R$ 50.000 Dell'Iris onde houver · BIGGS 13 = venda AGO/26 · verba = meta × CMV ficha técnica (o CMV já considera loja + Dell'Iris), mesmo racional nos 3 meses</div>
+<div class="scrollhint">← deslize para ver todas as colunas →</div>
+<div class="tblwrap"><table id="tblCmvQ4"><thead></thead><tbody></tbody></table></div>
+</section>
 
 <section id="sec-meta"><div class="card">
 <h2>🎯 Simulador de Meta — Rateio por Semana e Dia</h2>
@@ -640,26 +645,28 @@ function renderHoras(){
 const cmvSel=document.getElementById('cmvLoja');
 lojas.forEach(l=>cmvSel.add(new Option(l,l)));
 cmvSel.addEventListener('change',renderCmv);
+const Q4={OUT:{mi:9,nd:31},NOV:{mi:10,nd:30},DEZ:{mi:11,nd:31}};
+const cmvMesSel=document.getElementById('cmvMes');
+cmvMesSel.addEventListener('change',renderCmv);
+function q4Key(){return cmvMesSel.value;}
 const cmvRealizado={};
-function metaOut(l){
+function metaOut(l,key){
+  key=key||q4Key();
+  const mi=Q4[key].mi;
   const a=D25.porLoja[l];
   const dell=(CMVREF[l]&&CMVREF[l].dell)||0;
   let base, ref;
-  if(a&&a[9]>0){ base=a[9]; ref='OUT/25 da loja'; }
+  if(a&&a[mi]>0){ base=a[mi]; ref=key+'/25 da loja'; }
   else{
-    base=DATA.lojas[l].meses['08'].rev; ref='venda de AGO/26 (loja sem OUT/25)';
+    base=DATA.lojas[l].meses['08'].rev; ref='venda de AGO/26 (loja sem '+key+'/25)';
   }
   if(dell) ref+=' + Dell\u2019Iris '+fmt(Math.round(dell));
   return {v:base+dell, base, dell, ref};
 }
 const CMV_DELL=26.5;
-function verbaMes(l,meta,ref){ // verba oficial da planilha quando existir; senão base×CMV loja + Dell'Iris×26,5%
-  if(ref.vb!=null) return ref.vb;
-  if(ref.t==null&&!meta.dell) return null;
-  let v=0;
-  if(ref.t!=null) v+=meta.base*ref.t/100;
-  if(meta.dell) v+=meta.dell*CMV_DELL/100;
-  return (ref.t==null&&meta.dell)?null:v; // sem teórico da loja, não fecha verba
+function verbaMes(l,meta,ref,key){ // verba = meta total × CMV ficha técnica (CMV já considera loja + Dell'Iris)
+  if(ref.t==null) return null;
+  return meta.v*ref.t/100;
 }
 function pesosDowRede(){
   const dw=Array(7).fill(0);
@@ -668,9 +675,10 @@ function pesosDowRede(){
   const porDia=dw.map((v,d)=>v/nAgo[d]); const s=porDia.reduce((a,b)=>a+b,0);
   return porDia.map(v=>s?v/s:1/7);
 }
-function semanasOut(){ // semanas do calendario real de OUT/2026 (domingo a sabado)
+function semanasOut(){ // semanas do calendario real do mês Q4 selecionado (domingo a sabado)
+  const q=Q4[q4Key()];
   const pes=pesosDowRede();
-  const datas=[...Array(31)].map((_,i)=>{const dt=new Date(2026,9,i+1);return {dia:i+1,dow:(dt.getDay()+6)%7,dom:dt.getDay()};});
+  const datas=[...Array(q.nd)].map((_,i)=>{const dt=new Date(2026,q.mi,i+1);return {dia:i+1,dow:(dt.getDay()+6)%7,dom:dt.getDay()};});
   const pesoTot=datas.reduce((s,d)=>s+pes[d.dow],0);
   const sem=[]; let atual=[];
   datas.forEach(d=>{
@@ -696,13 +704,15 @@ function renderCmv(){
       <div class="lblc">${a}</div><div class="valc">${b}</div>${c?`<div class="subc">${c}</div>`:''}</div>`);
   const gap0=(ref.t!=null&&ref.r!=null)?ref.r-ref.t:null;
   const desvAgo=(ref.d!=null)?ref.d:((gap0!=null)?gap0/100*DATA.lojas[l].meses['08'].rev:null);
-  addC('\u{1F3AF} META DE VENDA OUT/26', fmt(Math.round(meta.v)), meta.ref, '#B81D22');
-  addC('\u{1F4D0} CMV DO CARD\u00c1PIO (META)', ref.t!=null?ref.t.toLocaleString('pt-BR')+'%':'\u2014', ref.t!=null?((CMVREF[l]&&CMVREF[l].dell)?'card\u00e1pio da loja \u00b7 Dell\u2019Iris 26,5%':'m\u00e9dia do card\u00e1pio da loja'):'em branco \u2014 card\u00e1pio em constru\u00e7\u00e3o', '#1e8e5a');
+  document.getElementById('cmvTit1').textContent=q4Key();
+  document.getElementById('cmvTit2').textContent=q4Key();
+  addC('\u{1F3AF} META DE VENDA '+q4Key()+'/26', fmt(Math.round(meta.v)), meta.ref, '#B81D22');
+  addC('\u{1F4D0} CMV FICHA T\u00c9CNICA (META)', ref.t!=null?ref.t.toLocaleString('pt-BR')+'%':'\u2014', ref.t!=null?((CMVREF[l]&&CMVREF[l].dell)?'ficha t\u00e9cnica loja + Dell\u2019Iris (blend)':'ficha t\u00e9cnica da loja'):'em branco \u2014 ficha t\u00e9cnica em constru\u00e7\u00e3o', '#1e8e5a');
   addC('\u{1F4CA} CMV REAL AGO/26', ref.r!=null?ref.r.toLocaleString('pt-BR')+'%':'\u2014',
     gap0!=null?('gap '+(gap0>0?'+':'')+gap0.toLocaleString('pt-BR',{maximumFractionDigits:1})+' pp \u2248 '+(desvAgo>=0?'+':'')+fmt(Math.round(desvAgo))+' em AGO'):'ponto de partida',
     gap0==null?'#8a8a8a':(gap0<=0?'#1e8e5a':(gap0<=4?'#d98e04':'#8f1519')));
   const vbM=verbaMes(l,meta,ref);
-  addC('\u{1F6D2} VERBA DE COMPRAS DO M\u00caS', vbM!=null?fmt(Math.round(vbM)):'\u2014', vbM!=null?(ref.vb!=null?'valor oficial da planilha de compras':(meta.dell?'loja \u00d7 '+ref.t.toLocaleString('pt-BR')+'% + Dell\u2019Iris \u00d7 26,5%':'meta \u00d7 CMV do card\u00e1pio')):'sem CMV do card\u00e1pio definido', '#2c6e8f');
+  addC('\u{1F6D2} VERBA DE COMPRAS DO M\u00caS', vbM!=null?fmt(Math.round(vbM)):'\u2014', vbM!=null?'meta \u00d7 '+ref.t.toLocaleString('pt-BR')+'% (ficha t\u00e9cnica)':'sem CMV ficha t\u00e9cnica definido', '#2c6e8f');
   const th=document.querySelector('#tblCmvSem thead'), tb=document.querySelector('#tblCmvSem tbody');
   th.innerHTML='<tr><th>Semana</th><th>Per\u00edodo</th><th>Meta venda</th><th>Verba compras</th><th>Venda realizada</th><th>Compras realizadas</th><th>CMV semana</th><th>Farol</th></tr>';
   tb.innerHTML='';
@@ -717,7 +727,7 @@ function renderCmv(){
     const cmvS=(r.v&&r.c)?r.c/r.v*100:null;
     tb.insertAdjacentHTML('beforeend',`<tr>
       <td class="mname">Semana ${s.n}</td>
-      <td>${String(s.ini).padStart(2,'0')} a ${String(s.fim).padStart(2,'0')}/10${s.dias<7?' <span style="color:#c94f7c">('+s.dias+'d)</span>':''}</td>
+      <td>${String(s.ini).padStart(2,'0')} a ${String(s.fim).padStart(2,'0')}/${String(Q4[q4Key()].mi+1).padStart(2,'0')}${s.dias<7?' <span style="color:#c94f7c">('+s.dias+'d)</span>':''}</td>
       <td><b>${fmt(Math.round(mv))}</b> <span style="color:#9c8888;font-size:.65rem">${(s.frac*100).toLocaleString('pt-BR',{maximumFractionDigits:1})}%</span></td>
       <td><b>${vc!=null?fmt(Math.round(vc)):'\u2014'}</b></td>
       <td><input class="rzInp" data-s="${s.n}" data-k="v" inputmode="numeric" placeholder="R$" value="${r.v?r.v.toLocaleString('pt-BR'):''}" style="width:100px;padding:6px;border:1.5px solid #e5cfcf;border-radius:6px;font-size:14px;text-align:right;"></td>
@@ -726,7 +736,7 @@ function renderCmv(){
       <td style="font-size:1rem">${cmvS!=null?farol(cmvS,ref.t):''}</td></tr>`);
   });
   const cmvM=(rV&&rC)?rC/rV*100:null;
-  tb.insertAdjacentHTML('beforeend',`<tr class="total"><td>M\u00caS</td><td>OUT/26</td>
+  tb.insertAdjacentHTML('beforeend',`<tr class="total"><td>M\u00caS</td><td>${q4Key()}/26</td>
     <td>${fmt(Math.round(mV))}</td><td>${mC?fmt(Math.round(mC)):'\u2014'}</td>
     <td>${rV?fmt(Math.round(rV))+(mV?' <span style="font-size:.65rem">('+(rV/mV*100).toFixed(0)+'% da meta)</span>':''):'\u2014'}</td>
     <td>${rC?fmt(Math.round(rC)):'\u2014'}</td>
@@ -738,21 +748,21 @@ function renderCmv(){
     (rz[s]=rz[s]||{})[k]=v; renderCmv();
   }));
   const th2=document.querySelector('#tblCmvGeral thead'), tb2=document.querySelector('#tblCmvGeral tbody');
-  th2.innerHTML='<tr><th>Loja</th><th>Venda OUT/25</th><th>Meta venda OUT/26</th><th>CMV card\u00e1pio</th><th>CMV real AGO</th><th>Gap (pp)</th><th>Desvio AGO (R$)*</th><th>Verba compras/m\u00eas</th><th style="text-align:left">Obs.</th></tr>';
+  th2.innerHTML='<tr><th>Loja</th><th>Venda '+q4Key()+'/25</th><th>Meta venda '+q4Key()+'/26</th><th>CMV ficha t\u00e9cnica</th><th>CMV real AGO</th><th>Gap (pp)</th><th>Desvio AGO (R$)*</th><th>Verba compras/m\u00eas</th><th style="text-align:left">Obs.</th></tr>';
   tb2.innerHTML='';
   let TV=0,TC=0,TDv=0,T25v=0,TDell=0;
   lojas.map(x=>({x,m:metaOut(x),c:CMVREF[x]||{}})).sort((a,b)=>b.m.v-a.m.v).forEach(({x,m,c})=>{
     const mk=DATA.lojas[x].marca;
     TV+=m.v; const _vb=verbaMes(x,m,c); TC+=_vb||0;
-    if(D25.porLoja[x]&&D25.porLoja[x][9]>0) T25v+=D25.porLoja[x][9];
+    if(D25.porLoja[x]&&D25.porLoja[x][Q4[q4Key()].mi]>0) T25v+=D25.porLoja[x][Q4[q4Key()].mi];
     TDell+=m.dell||0;
     const gap=(c.t!=null&&c.r!=null)?c.r-c.t:null;
     const dv=(c.d!=null)?c.d:(gap!=null?gap/100*DATA.lojas[x].meses['08'].rev:null);
     if(dv!=null) TDv+=dv;
-    const v25=(D25.porLoja[x]&&D25.porLoja[x][9]>0)?D25.porLoja[x][9]:null;
+    const _mi=Q4[q4Key()].mi; const v25=(D25.porLoja[x]&&D25.porLoja[x][_mi]>0)?D25.porLoja[x][_mi]:null;
     const obs=[];
     if(m.dell) obs.push('Dell\u2019Iris separada: '+fmt(Math.round(m.dell)));
-    if(v25==null) obs.push('sem OUT/25 \u2014 meta = venda AGO/26');
+    if(v25==null) obs.push('sem '+q4Key()+'/25 \u2014 meta = venda AGO/26');
     tb2.insertAdjacentHTML('beforeend',`<tr style="${x===l?'background:#fdf3f3;':''}"><td class="mname"><span class="tagm tag-${mk}">${mk}</span>${x}</td>
       <td>${v25!=null?fmt(Math.round(v25)):'\u2014'}</td>
       <td><b>${fmt(Math.round(m.v))}</b>${m.dell?' <span title="inclui Dell\u2019Iris" style="font-size:.65rem;color:#c94f7c;">+DI</span>':''}</td>
@@ -764,6 +774,34 @@ function renderCmv(){
       <td style="text-align:left;color:#8a6060;font-size:.7rem;">${obs.join(' \u00b7 ')}</td></tr>`);
   });
   tb2.insertAdjacentHTML('beforeend',`<tr class="total"><td>REDE</td><td>${fmt(Math.round(T25v))}</td><td>${fmt(Math.round(TV))}</td><td></td><td></td><td></td><td class="neg"><b>+${fmt(Math.round(TDv))}</b></td><td>${fmt(Math.round(TC))} <span style="font-size:.65rem">(lojas com te\u00f3rico)</span></td><td style="text-align:left;font-size:.68rem;">Dell\u2019Iris total: ${fmt(Math.round(TDell))}</td></tr>`);
+  // ---- Resumo Q4 ----
+  const thQ=document.querySelector('#tblCmvQ4 thead'), tbQ=document.querySelector('#tblCmvQ4 tbody');
+  thQ.innerHTML='<tr><th>Loja</th><th>Meta OUT</th><th>Verba OUT</th><th>Meta NOV</th><th>Verba NOV</th><th>Meta DEZ</th><th>Verba DEZ</th><th>Meta Q4</th><th>Verba Q4</th></tr>';
+  tbQ.innerHTML='';
+  const TQ={mo:0,vo:0,mn:0,vn:0,md:0,vd:0};
+  lojas.slice().sort((a,b)=>metaOut(b,'OUT').v-metaOut(a,'OUT').v).forEach(x=>{
+    const c=CMVREF[x]||{t:null};
+    const mk=DATA.lojas[x].marca;
+    const ms={},vs={};
+    ['OUT','NOV','DEZ'].forEach(k=>{
+      ms[k]=metaOut(x,k);
+      vs[k]=verbaMes(x,ms[k],c,k);
+    });
+    TQ.mo+=ms.OUT.v; TQ.mn+=ms.NOV.v; TQ.md+=ms.DEZ.v;
+    TQ.vo+=vs.OUT||0; TQ.vn+=vs.NOV||0; TQ.vd+=vs.DEZ||0;
+    const mq=ms.OUT.v+ms.NOV.v+ms.DEZ.v, vq=(vs.OUT||0)+(vs.NOV||0)+(vs.DEZ||0);
+    const vTd=v=>v!=null?fmt(Math.round(v)):'\u2014';
+    tbQ.insertAdjacentHTML('beforeend',`<tr style="${x===l?'background:#fdf3f3;':''}"><td class="mname"><span class="tagm tag-${mk}">${mk}</span>${x}</td>
+      <td>${fmt(Math.round(ms.OUT.v))}${ms.OUT.dell?' <span style="font-size:.6rem;color:#c94f7c;">+DI</span>':''}</td><td>${vTd(vs.OUT)}</td>
+      <td>${fmt(Math.round(ms.NOV.v))}</td><td>${vTd(vs.NOV)}</td>
+      <td>${fmt(Math.round(ms.DEZ.v))}</td><td>${vTd(vs.DEZ)}</td>
+      <td><b>${fmt(Math.round(mq))}</b></td><td style="color:#2c6e8f;"><b>${vq>0?fmt(Math.round(vq)):'\u2014'}</b></td></tr>`);
+  });
+  tbQ.insertAdjacentHTML('beforeend',`<tr class="total"><td>REDE</td>
+    <td>${fmt(Math.round(TQ.mo))}</td><td>${fmt(Math.round(TQ.vo))}</td>
+    <td>${fmt(Math.round(TQ.mn))}</td><td>${fmt(Math.round(TQ.vn))}</td>
+    <td>${fmt(Math.round(TQ.md))}</td><td>${fmt(Math.round(TQ.vd))}</td>
+    <td><b>${fmt(Math.round(TQ.mo+TQ.mn+TQ.md))}</b></td><td><b>${fmt(Math.round(TQ.vo+TQ.vn+TQ.vd))}</b></td></tr>`);
 }
 // ===== Simulador de Meta =====
 const metaMesSel=document.getElementById('metaMes');
@@ -1170,7 +1208,7 @@ const EXPORTS=[
  {sec:'sec-lojas',   file:()=>'Lojas_'+anoSel()+'.xlsx', sheets:[{id:'tblLojas',nome:'Lojas'}], t:'Painel por Loja'},
  {sec:'sec-horas',   file:()=>'Vendas_por_Hora.xlsx', sheets:[{id:'hmTbl',nome:'Mapa de Calor'}], t:'Vendas por Hora (mapa dia \u00d7 hora)'},
  {sec:'sec-meta',    file:()=>'Simulador_Meta.xlsx', sheets:[{id:'tblMetaSem',nome:'Meta por Semana'},{id:'tblMetaDia',nome:'Meta por Dia'}], t:'Simulador de Meta'},
- {sec:'sec-cmv',     file:()=>'Controle_CMV_OUT26_'+(cmvSel.value.split(' ')[0]+cmvSel.value.split(' ')[1]||'').replace(/[^A-Za-z0-9]/g,'')+'.xlsx', sheets:[{id:'tblCmvSem',nome:'Acompanhamento Semanal'},{id:'tblCmvGeral',nome:'Vis\u00e3o Geral Rede'}], t:'Controle de CMV \u2014 OUT/26', sub:()=>'Loja: '+cmvSel.value},
+ {sec:'sec-cmv',     file:()=>'Controle_CMV_'+q4Key()+'26_'+(cmvSel.value.split(' ')[0]+cmvSel.value.split(' ')[1]||'').replace(/[^A-Za-z0-9]/g,'')+'.xlsx', sheets:[{id:'tblCmvSem',nome:'Acompanhamento Semanal'},{id:'tblCmvGeral',nome:'Vis\u00e3o Geral Rede'},{id:'tblCmvQ4',nome:'Resumo Q4'}], t:()=>'Controle de CMV \u2014 '+q4Key()+'/26', sub:()=>'Loja: '+cmvSel.value+' \u00b7 M\u00eas: '+q4Key()+'/26'},
  {sec:'sec-2025',    file:()=>'Comparativo_2025x2026.xlsx', sheets:[{id:'tbl2025',nome:'Resumo 25x26'},{id:'tblMes25',nome:'Loja x M\u00eas'}], t:'Comparativo 2025 \u00d7 2026'},
  {sec:'sec-pagamentos', file:()=>'Formas_Pagamento.xlsx', sheets:[{id:'tblPag',nome:'Formas de Pagamento'}], t:'An\u00e1lise por Forma de Pagamento'},
 ];
@@ -1180,7 +1218,7 @@ EXPORTS.forEach(cfg=>{
   const wrap=document.createElement('div'); wrap.className='hrow';
   h2.parentNode.insertBefore(wrap,h2); wrap.appendChild(h2);
   const b=document.createElement('button'); b.className='btnXls'; b.innerHTML='\u{1F4E5} Baixar Excel';
-  b.addEventListener('click',()=>exportXls(cfg.file(), cfg.sheets, {titulo:cfg.t, sub:(cfg.sub?cfg.sub():'Filtros: '+filtroTxt())}));
+  b.addEventListener('click',()=>exportXls(cfg.file(), cfg.sheets, {titulo:(typeof cfg.t==='function'?cfg.t():cfg.t), sub:(cfg.sub?cfg.sub():'Filtros: '+filtroTxt())}));
   wrap.appendChild(b);
 });
 
